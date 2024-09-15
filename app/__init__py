@@ -1,0 +1,12 @@
+from flask import Flask
+from .config import Config
+from .api import init_api  # Importa a função init_api
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+
+    # Inicializa a API
+    init_api(app)  # Registra o blueprint da API
+
+    return app

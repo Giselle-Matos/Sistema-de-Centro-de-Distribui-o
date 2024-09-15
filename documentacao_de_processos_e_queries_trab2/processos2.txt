@@ -1,0 +1,511 @@
+1.1) O sistema deve ter a capacidade de armazenar os produtos contidos no estoque, para que esses possam ser
+controlados individualmente. Outro detalhe importante no cadastro do produto ´e armazenar a quantidade
+m´ınima que dever´a ter desse produto no estoque;
+
+possível resolução:criar uma tabela armazenamento, com os produtos do estoque disponíveis que estão armazenados no local. ter uma coluna "quantidade mínima" ao cadastrar o produto, ou seja, 
+esse valor de quantidade mínima vai ser armazenado em uma tabela produtos. criar um trigger para que, toda vez que uma venda ou devolução for realizada atualizar
+o valor representando a quantidade de produtos em estoque. antes de fazer uma venda, no trigger, verificar se após essa venda o número de produtos em estoque 
+será menor do que a quantidade mínima cadastrada na tabela produtos, e caso seja, abortar a operação e gerar uma mensagem de erro.
+
+1.2) Cada produto ter´a um fornecedor relacionado a ele, sendo poss´ıvel controlar os produtos divididos por fornecedores;
+
+possível resolução:
+cada fornecedor terá um id e cada produto terá um id. Criar uma tabela catálogo como no exemplo do slide 7, que relacione os produtos e exiba também o preço.
+dessa forma, caso o usuário queira saber quais produtos um fornecedor fornece (busca por  id do fornecedor) ou  quais fornecedores fornecem um determinado produto (busca por
+id do produto). para essas queries, usar group by.
+
+1.3) Os produtos devem ser divididos por categoria, ou seja, cada produto ter´a uma categoria;
+
+possível resolução:
+ao fazer o cadastro do produto, deve-se inserir a categoria do produto (então até agora a tabela produto tem os atributos:
+pid, nome, categoria, quantidade_minima). para fazer a querie referente a essa interação, ou seja, se o  usuário quiser saber
+quais produtos existem em uma determinada categoria, então deve-se utilizar o group by para listar as categorias e então 
+o usuário irá selecionar a categoria que quer, e essa categoria vai ser utilizada na busca de um select para exibir quais sao os 
+produtos relacionados a aquela categoria.
+
+1.4) As entradas e sa´ıdas dos produtos dever˜ao ser registradas no programa, para futuramente obtermos um hist´orico
+completo de todo o trajeto do produto dentro do Centro de Distribui¸c˜ao (CD);
+ 
+possível resolução:
+
+criar uma única tabela de histórico de entradas e saídas, que contem vendas e devoluções, e possui um único trigger de update after, que
+irá verificar se o tipo de operação é venda ou devolução. se for venda, então atualiza a tabela de estoque na tupla
+em que tiver o id referente ao produto que está sendo vendido, e subtrai a quantidade que está sendo vendida.
+se for de devolução, faz o mesmo processo porém ao inves de subtrair, soma.
+é importante que ANTES de atualizar o dado subtraindo, seja verificado se quantidade a ser subtraída é maior ou igual
+À quantidade mínima definida.
+uma saída só pode ocorrer por meio de uma venda, e uma entrada pode ocorrer por meio de uma devolução ou de uma compra feita 
+pelo centro para uma fornecedora. 
+atributos necessários da tabela historico_entradas_saidas: pid, fornecedor, operação (entrada ou saida), tipo_entrada, tempo_pedido, tempo_saída, 
+quantidade,loja_destino.
+fazer um trigger que verifica o tipo de operação. se for entrada, verificar se é devolução ou compra, e se for compra tornar os campos de tempo entrada e saída obrigatorios.
+o trigger também tem que atualizar o estoque. (ELABORAR LOGICA)
+
+
+1.5) Na entrada do produto ser´a necess´ario armazenar a data do pedido e a data de entrega da mercadoria, para
+depois podermos analisar quanto tempo o pedido demora a chegar ao estoque
+
+possível resolução: 
+a "entrada" pode ocorrer de duas formas: uma devolução de produto feita por cliente, ou uma compra feita pelo centro de distribuição
+a uma fornecedora. nos casos de devolução, não considerar o timer, mas tem que adicionar uma coluna de tipo de entrada.
+nos casos de compra pelo centro, armazenar o tempo de pedido, o tempo de chegada e o tempo total levado.
+
+1.6) Na sa´ıda, obrigatoriamente ser´a informada a loja para a qual a mercadoria foi enviada, pois ao final do mˆes
+devemos fazer o fechamento do faturamento para saber qual ´e a loja que mais obteve vendas;
+
+O CENTRO DE DISTRIBUIÇÃO IRÁ ACEITAR DEVOLUÇÕES? COMO O GRAU DE COMPLEXIDADE AUMENTA SE ACEITAR?
+
+possivel resolução:
+a tabela de historico de entradas e saídas terá uma coluna informando o nome da loja e/ou (talvez) cnpj
+para fazer o faturamento: utilizar o campo de tipo de operação (entrada ou saída), calcular as entradas
+somando os valores e depois somar os valores das saídas e diminuir um do outro. para a saída (ou seja, venda), utilizar
+os campos de quantidade da tabela de historico e multiplicar com o preço da tabela catálogo. o mesmo
+serve para a entrada (ou seja, devolução ou compra feita pelo centro).
+
+1.7) Outra capacidade que o sistema dever´a ter ´e calcular o peso total de uma entrada ou de uma sa´ıda;
+
+possível resolução: adicionar uma coluna peso total na tabela historico e uma coluna peso na tabela produto. então,
+utilizar os campos quantidade da tabela historico e peso da tabela produto e multiplicar.
+
+1.8) No programa, devem-se apresentar os produtos nos quais a sua quantidade total em estoque ´e menor ou igual
+`a quantidade m´ınima requerida em estoque definida previamente;
+
+possível solução: ao invés de gerar uma mensagem de erro bloqueando a venda se a quantidade do estoque ficar abaixo 
+da quantidade mínima (apenas bloquear se o valor for ficar negativo), ter um campo da tabela estoque em que seja definido se está
+abaixo da quantidade mínima ou não. ex: abaixo_qtd_minima = true. pode-se exibir uma lista de produtos que precisam ser repostos 
+a partir de uma query que filtra os produtos com quantidade minima marcado como true.
+
+1.9) A transportadora ser´a outro item importante na an´alise, pois devemos saber qual transportadora ´e mais utilizada
+para fazer a entrega dos produtos e qual ´e a mais utilizada para fazer a sa´ıda;
+
+possivel resolução:
+na tabela de histórico, devemos ter também uma coluna com o nome da transportadora, exceto nos casos de devolução do produto.
+Para saber qual transportadora é a mais utilizada para saída e para a entrega, podemos ter uma query que seleciona as 
+tuplas por entrada do tipo compra feita pelo centro, agrupa por transportadora e conta quantas vezes ela foi utilizada. e uma query que seleciona as 
+tuplas por saída e faz a contagem.
+
+1.10) Uma quest˜ao que o cliente deseja observar ´e em qual categoria possui mais item no local.
+
+possível resolução:
+agrupar os produtos por categoria, realizar um count nas unidades dos produtos em estoque de cada categoria
+e depois pegar o max dos resultados dos counts. (VERIFICAR SE ESSA RESOLUÇAÕ ESTÁ CERTA)
+
+
+TABELAS IDENTIFICADAS:
+produto
+historico_entrada_saida
+estoque
+catalogo
+
+
+
+----------------------------------------------------------------------------------------
+gpt generated:
+
+Vou criar um documento estruturado que você pode usar como guia para desenvolver
+ o sistema de controle de estoque. Vou manter a organização e o estilo que você 
+utilizou, mas incorporando as sugestões e detalhes que discutimos.
+
+---
+
+**Guia de Desenvolvimento para Sistema de Controle de Estoque**
+
+### 1.1) Armazenamento de produtos e quantidade mínima
+
+**Resolução sugerida:**
+- **Estruturação:**
+  - Criar uma tabela `produtos` com os seguintes atributos: 
+    - `pid` (chave primária, identificador único do produto)
+    - `nome` (nome do produto)
+    - `categoria` (relacionamento com a tabela de categorias)
+    - `quantidade_minima` (quantidade mínima permitida no estoque)
+  - Criar uma tabela `estoque` com os seguintes atributos:
+    - `estoque_id` (chave primária, identificador único do estoque)
+    - `pid` (chave estrangeira relacionada à tabela `produtos`)
+    - `quantidade_atual` (quantidade atual em estoque)
+  
+- **Implementação de Trigger:**
+  - Criar um `trigger` que seja disparado **antes** de uma venda:
+    - Verificar se a quantidade após a venda ficará abaixo da quantidade mínima permitida.
+    - Se ficar abaixo da quantidade mínima, exibir uma mensagem de aviso e permitir a venda; caso contrário, impedir a operação.
+
+### 1.2) Relacionamento com fornecedores
+
+**Resolução sugerida:**
+- **Estruturação:**
+  - Criar uma tabela `fornecedores` com os seguintes atributos:
+    - `fornecedor_id` (chave primária, identificador único do fornecedor)
+    - `nome_fornecedor` (nome do fornecedor)
+  - Criar uma tabela `produtos_fornecedores` (tabela de relacionamento) 
+com os seguintes atributos:
+    - `pid` (chave estrangeira, relacionado à tabela `produtos`)
+    - `fornecedor_id` (chave estrangeira, relacionado à tabela `fornecedores`)
+    - `preco` (preço do produto fornecido)
+  
+- **Consulta:**
+  - Para listar os produtos fornecidos por um determinado fornecedor, usar 
+`SELECT` com `JOIN` e `GROUP BY`:
+    ```sql
+    SELECT p.nome, pf.preco 
+    FROM produtos p
+    JOIN produtos_fornecedores pf ON p.pid = pf.pid
+    WHERE pf.fornecedor_id = ?;
+    ```
+
+### 1.3) Categorização de produtos
+
+**Resolução sugerida:**
+- **Estruturação:**
+  - Criar uma tabela `categorias` com os seguintes atributos:
+    - `categoria_id` (chave primária, identificador único da categoria)
+    - `nome_categoria` (nome da categoria)
+  - Na tabela `produtos`, adicionar uma coluna `categoria_id` como chave estrangeira.
+  
+- **Consulta:**
+  - Para listar produtos de uma determinada categoria, usar `SELECT` com `GROUP BY`:
+    ```sql
+    SELECT p.nome 
+    FROM produtos p
+    WHERE p.categoria_id = ?;
+    ```
+
+### 1.4) Registro de entradas e saídas
+o 
+**Resolução sugerida:**
+- **Estruturação:**
+  - Criar uma tabela `historico_entrada_saida` com os seguintes atributos:
+    - `historico_id` (chave primária, identificador único do histórico)
+    - `pid` (chave estrangeira relacionada à tabela `produtos`)
+    - `fornecedor_id` (chave estrangeira relacionada à tabela `fornecedores`, se aplicável)
+    - `quantidade` (quantidade movimentada)
+    - `tipo_operacao` (entrada ou saída)
+    - `data_operacao` (data da operação)
+  
+- **Implementação de Trigger:**
+  - Criar um `trigger` que seja disparado **após** a inserção no histórico:
+    - Se `tipo_operacao` for 'entrada', aumentar a quantidade em estoque.
+    - Se `tipo_operacao` for 'saída', subtrair a quantidade em estoque.
+
+### 1.5) Armazenamento das datas de pedido e entrega
+
+**Resolução sugerida:**
+- **Estruturação:**
+  - Na tabela `historico_entrada_saida`, adicionar as colunas:
+    - `data_pedido` (data do pedido)
+    - `data_entrega` (data de entrega)
+    - `tipo_entrada` (compra ou devolução)
+  
+- **Implementação de Lógica:**
+  - Se o `tipo_entrada` for 'compra', calcular o tempo total de entrega
+ e armazenar no registro.
+
+### 1.6) Informar a loja nas saídas
+
+**Resolução sugerida:**
+- **Estruturação:**
+  - Na tabela `historico_entrada_saida`, adicionar uma coluna `loja_destino` 
+(nome da loja para qual a mercadoria foi enviada).
+  
+- **Faturamento:**
+  - Para calcular o faturamento mensal por loja, usar `SELECT` com somatório 
+da quantidade e preço:
+    ```sql
+    SELECT loja_destino, SUM(pf.preco * hs.quantidade) AS faturamento
+    FROM historico_entrada_saida hs
+    JOIN produtos_fornecedores pf ON hs.pid = pf.pid
+    WHERE hs.tipo_operacao = 'saída'
+    GROUP BY loja_destino;
+    ```
+
+### 1.7) Cálculo do peso total
+
+**Resolução sugerida:**
+- **Estruturação:**
+  - Na tabela `historico_entrada_saida`, adicionar uma coluna `peso_total`.
+  - Na tabela `produtos`, adicionar uma coluna `peso` (peso unitário do produto).
+  
+- **Implementação de Lógica:**
+  - Calcular `peso_total` como `quantidade * peso` e armazenar no registro de histórico.
+
+### 1.8) Monitoramento da quantidade mínima em estoque
+
+**Resolução sugerida:**
+- **Estruturação:**
+  - Na tabela `estoque`, adicionar uma coluna `abaixo_qtd_minima` (booleano).
+  
+- **Implementação de Trigger:**
+  - Atualizar `abaixo_qtd_minima` para `true` se a quantidade em estoque cair
+ abaixo da quantidade mínima.
+
+### 1.9) Análise de transportadoras
+
+**Resolução sugerida:**
+- **Estruturação:**
+  - Na tabela `historico_entrada_saida`, adicionar uma coluna `transportadora`
+ (nome da transportadora).
+  
+- **Consulta:**
+  - Para contar o uso de transportadoras, use `SELECT` com `GROUP BY` e `COUNT`:
+    ```sql
+    SELECT transportadora, COUNT(*) AS qtd_utilizacao
+    FROM historico_entrada_saida
+    WHERE tipo_operacao = 'saída'
+    GROUP BY transportadora;
+    ```
+
+### 1.10) Categoria com mais itens
+
+**Resolução sugerida:**
+- **Estruturação:**
+  - Usar `SELECT` com `GROUP BY` para contar os produtos em cada categoria e determinar
+ qual tem mais itens.
+    ```sql
+    SELECT c.nome_categoria, COUNT(p.pid) AS total_produtos
+    FROM produtos p
+    JOIN categorias c ON p.categoria_id = c.categoria_id
+    GROUP BY c.nome_categoria
+    ORDER BY total_produtos DESC
+    LIMIT 1;
+    ```
+
+### Tabelas Identificadas:
+- **Produtos:** Armazena detalhes dos produtos, como nome, categoria e quantidade mínima.
+- **Fornecedores:** Armazena informações sobre os fornecedores.
+- **Produtos_Fornecedores:** Relaciona produtos com fornecedores.
+- **Estoque:** Gerencia as quantidades atuais de produtos no estoque.
+- **Historico_Entrada_Saida:** Registra todas as entradas e saídas de produtos.
+- **Categorias:** Gerencia as categorias dos produtos.
+
+---
+
+Esse guia cobre todos os aspectos mencionados e deve servir como um roteiro
+ para o desenvolvimento do sistema. Se precisar de mais detalhes ou esclarecimentos, estou à disposição!
+
+----------------------------------------------------------------------
+queries:
+
+Consultar todos os produtos fornecidos por um determinado fornecedor:
+
+SELECT p.nome AS produto, pf.preco AS preco
+FROM produtos p
+JOIN produtos_fornecedores pf ON p.pid = pf.pid
+JOIN fornecedores f ON f.fornecedor_id = pf.fornecedor_id
+WHERE f.fornecedor_id = [ID_DO_FORNECEDOR];
+
+Consultar todos os fornecedores que fornecem um determinado produto:
+
+SELECT f.nome AS fornecedor, pf.preco AS preco
+FROM fornecedores f
+JOIN produtos_fornecedores pf ON f.fornecedor_id = pf.fornecedor_id
+JOIN produtos p ON p.pid = pf.pid
+WHERE p.pid = [ID_DO_PRODUTO];
+
+Consultar todos os produtos fornecidos por cada fornecedor (agrupados por fornecedor):
+
+SELECT f.nome AS fornecedor, GROUP_CONCAT(p.nome ORDER BY p.nome ASC SEPARATOR ', ') AS produtos
+FROM fornecedores f
+JOIN produtos_fornecedores pf ON f.fornecedor_id = pf.fornecedor_id
+JOIN produtos p ON p.pid = pf.pid
+GROUP BY f.fornecedor_id;
+
+Consultar todos os fornecedores para cada produto (agrupados por produto):
+
+SELECT p.nome AS produto, GROUP_CONCAT(f.nome ORDER BY f.nome ASC SEPARATOR ', ') AS fornecedores
+FROM produtos p
+JOIN produtos_fornecedores pf ON p.pid = pf.pid
+JOIN fornecedores f ON f.fornecedor_id = pf.fornecedor_id
+GROUP BY p.pid;
+
+Consulta para Listar Produtos por Categoria
+
+SELECT p.nome 
+FROM produtos p
+JOIN categorias c ON p.categoria_id = c.categoria_id
+WHERE p.categoria_id = ?; -- Substitua o '?' pelo id da categoria específica
+
+Consulta para Calcular o Faturamento Mensal por Loja
+
+SELECT 
+    loja_destino,
+    SUM(pf.preco * hs.quantidade) AS faturamento
+FROM 
+    historico_entrada_saida hs
+JOIN 
+    produtos_fornecedores pf ON hs.pid = pf.pid
+WHERE 
+    hs.tipo_operacao = 'saída'
+    AND YEAR(hs.data_operacao) = YEAR(CURDATE())
+    AND MONTH(hs.data_operacao) = MONTH(CURDATE())
+GROUP BY 
+    loja_destino;
+
+
+OBS: CRIAR FUNCIONALIDADES DE VISUALIZAR O FATURAMENTO DO ANO E OUTRA PARA VER O 
+FATURAMENTO DO MÊS
+
+Faturamento do Ano Atual
+
+SELECT 
+    loja_destino,
+    MONTH(hs.data_operacao) AS mes,
+    SUM(pf.preco * hs.quantidade) AS faturamento
+FROM 
+    historico_entrada_saida hs
+JOIN 
+    produtos_fornecedores pf ON hs.pid = pf.pid
+WHERE 
+    hs.tipo_operacao = 'saída'
+    AND YEAR(hs.data_operacao) = YEAR(CURDATE())
+GROUP BY 
+    loja_destino, mes
+ORDER BY 
+    loja_destino, mes;
+
+Faturamento para um Intervalo Específico de Datas
+
+SELECT 
+    loja_destino,
+    MONTH(hs.data_operacao) AS mes,
+    YEAR(hs.data_operacao) AS ano,
+    SUM(pf.preco * hs.quantidade) AS faturamento
+FROM 
+    historico_entrada_saida hs
+JOIN 
+    produtos_fornecedores pf ON hs.pid = pf.pid
+WHERE 
+    hs.tipo_operacao = 'saída'
+    AND hs.data_operacao BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'
+GROUP BY 
+    loja_destino, ano, mes
+ORDER BY 
+    loja_destino, ano, mes;
+
+
+Consulta para Contar o Uso de Transportadoras
+
+SELECT 
+    transportadora,
+    COUNT(*) AS qtd_utilizacao
+FROM 
+    historico_entrada_saida
+WHERE 
+    tipo_operacao = 'saída'
+GROUP BY 
+    transportadora
+ORDER BY 
+    qtd_utilizacao DESC;
+
+
+Consulta SQL para Categoria com Mais Itens
+
+SELECT 
+    c.nome_categoria, 
+    COUNT(p.pid) AS total_produtos
+FROM 
+    produtos p
+JOIN 
+    categorias c ON p.categoria_id = c.categoria_id
+GROUP BY 
+    c.nome_categoria
+ORDER BY 
+    total_produtos DESC
+LIMIT 1;
+
+
+-----------------------------------------------------------------
+CRIAÇÃO DAS OUTRAS 10 FUNCIONALIDADES
+
+Relatório de Produtos Acima da Quantidade Mínima
+
+SELECT p.nome, e.quantidade_atual
+FROM produtos p
+JOIN estoque e ON p.pid = e.pid
+WHERE e.quantidade_atual > p.quantidade_minima;
+
+
+Histórico de Movimentações de um Produto Específico
+
+SELECT * 
+FROM historico_entrada_saida
+WHERE pid = ?;  -- Substitua ? pelo ID do produto desejado
+
+
+Produtos Com Mais de X Dias no Estoque
+
+SELECT p.nome, DATEDIFF(CURDATE(), hs.data_operacao) AS dias_no_estoque
+FROM historico_entrada_saida hs
+JOIN produtos p ON hs.pid = p.pid
+WHERE hs.tipo_operacao = 'entrada'
+AND DATEDIFF(CURDATE(), hs.data_operacao) > ?;  -- Substitua ? pelo número de dias
+
+
+Lista de Fornecedores Mais Ativos
+
+SELECT f.nome_fornecedor, COUNT(pf.pid) AS qtd_produtos
+FROM fornecedores f
+JOIN produtos_fornecedores pf ON f.fornecedor_id = pf.fornecedor_id
+GROUP BY f.nome_fornecedor
+ORDER BY qtd_produtos DESC;
+
+
+Produto Mais Vendido em um Período Específico
+
+SELECT p.nome, SUM(hs.quantidade) AS total_vendido
+FROM historico_entrada_saida hs
+JOIN produtos p ON hs.pid = p.pid
+WHERE hs.tipo_operacao = 'saída'
+AND hs.data_operacao BETWEEN ? AND ?  -- Substitua ? pelos intervalos de datas
+GROUP BY p.nome
+ORDER BY total_vendido DESC
+LIMIT 1;
+
+
+Data Média de Entrega por Fornecedor
+
+SELECT f.nome_fornecedor, AVG(DATEDIFF(hs.data_entrega, hs.data_pedido)) AS media_dias
+FROM historico_entrada_saida hs
+JOIN fornecedores f ON hs.fornecedor_id = f.fornecedor_id
+WHERE hs.tipo_operacao = 'entrada'
+GROUP BY f.nome_fornecedor;
+
+
+Total de Produtos por Transportadora
+
+SELECT transportadora, SUM(quantidade) AS total_quantidade
+FROM historico_entrada_saida
+WHERE tipo_operacao = 'saída'
+GROUP BY transportadora;
+
+
+
+Produtos Recentemente Adicionados ao Estoque
+
+SELECT p.nome, hs.data_operacao
+FROM historico_entrada_saida hs
+JOIN produtos p ON hs.pid = p.pid
+WHERE hs.tipo_operacao = 'entrada'
+ORDER BY hs.data_operacao DESC;
+
+
+Produto com Maior Tempo de Permanência no Estoque
+
+SELECT p.nome, DATEDIFF(CURDATE(), MIN(hs.data_operacao)) AS tempo_no_estoque
+FROM historico_entrada_saida hs
+JOIN produtos p ON hs.pid = p.pid
+WHERE hs.tipo_operacao = 'entrada'
+GROUP BY p.nome
+ORDER BY tempo_no_estoque DESC
+LIMIT 1;
+
+
+Análise de Desempenho de Vendas por Categoria
+
+SELECT c.nome_categoria, SUM(pf.preco * hs.quantidade) AS total_vendido, COUNT(*) AS qtd_vendas
+FROM historico_entrada_saida hs
+JOIN produtos p ON hs.pid = p.pid
+JOIN categorias c ON p.categoria_id = c.categoria_id
+JOIN produtos_fornecedores pf ON hs.pid = pf.pid
+WHERE hs.tipo_operacao = 'saída'
+GROUP BY c.nome_categoria
+ORDER BY total_vendido DESC;
+
